@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+import socket
+import sys
+from socket import *
+
+# The base for this server is from https://medium.com/swlh/lets-write-a-chat-app-in-python-f6783a9ac170
+
+def accept_connections(serverSocket):
+    """ Runs the server and verifies that the client is known"""
+    while True:
+        print("Server is accepting connections")
+        connectionSocket, client_address = serverSocket.accept()
+        try:
+            sentence = connectionSocket.recv(BUFSIZ)
+            if(sentence == bytes("PORTNUM", "utf8")):
+                connectionSocket.send(bytes("%s" % "PORTNUM", "utf8"))
+                print("Connected to Client -- Waiting for Message from Client")
+                try:
+                    handle_client(connectionSocket)
+                    print("Connection Closed")
+                except KeyboardInterrupt:
+                    connectionSocket.send(bytes("close", "utf8"))
+                    connectionSocket.close()
+                    break
+                connectionSocket.close()
+        except KeyboardInterrupt:
+            connectionSocket.close()
+            break
+
+def handle_client(connectionSocket):  # Takes client socket as argument.
+    """Handles a single client connection."""
+    while True:
+        msg = connectionSocket.recv(BUFSIZ)
+        #We need to quit the program
+        if not msg: break
+        
+        else:
+            # Print what the other host wrote
+            print(msg.decode("utf8"))
+            # get the user input from the server
+            userChat = input(HANDLE + "> ")
+            if(userChat == "\quit"):
+                connectionSocket.send(bytes("close", "utf8"))
+                break
+            else:
+                msg = HANDLE + "> " + userChat
+                connectionSocket.send(bytes(msg, "utf8"))
+        
+clients = {}
+addresses = {}
+
+
+BUFSIZ = 1024
+HANDLE = "SammyServer"
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print ("USAGE: " + sys.argv[0] + " port")
+        exit()
+
+    serverPort = int(sys.argv[1])
+    serverSocket = socket(AF_INET, SOCK_STREAM)
+    serverSocket.bind(('', serverPort))
+    serverSocket.listen(1)
+    accept_connections(serverSocket)
+    print("\nClosing Server Socket")
+    serverSocket.close()
+            

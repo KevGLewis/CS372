@@ -1,0 +1,4 @@
+#!/bin/bash
+gcc -g -Wall -std=gnu99 chatclient.c snd_recv_help.c -o chatclient
+rm -rf *.dSYM
+
