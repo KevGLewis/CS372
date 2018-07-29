@@ -1,11 +1,3 @@
-//
-//  snd_recv_help.h
-//  DevEnviro
-//
-//  Created by Kevin Lewis on 3/8/18.
-//  Copyright © 2018 Kevin Lewis. All rights reserved.
-//
-
 #ifndef snd_recv_help_h
 #define snd_recv_help_h
 #define _GNU_SOURCE
@@ -21,13 +13,6 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <signal.h>
-
-struct InputFileNames
-{
-    char keyFileName[256];
-    char textToEncryptFileName[256];
-};
-
 
 void error(const char *msg);
 int ConnectionSetup(int socketFD, char* password);

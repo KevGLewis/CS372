@@ -2,7 +2,9 @@
 #include "snd_recv_help.h"
 void error(const char *msg) { perror(msg); exit(1); } // Error function used for reporting issues
 
-// Return 1 if it was successful, and 0 if it was not
+// Sets up the connection with the server
+// Verfies that it is a trusted server by checking its response
+// Input: int Socket number, char* the password you want to send
 int ConnectionSetup(int socketFD, char* password)
 {
     // Clear the arrays
@@ -21,7 +23,7 @@ int ConnectionSetup(int socketFD, char* password)
     }
     else
     {
-        printf("Successfully connected to server\n");
+        printf("Successfully connected to server, send \\quit to exit\n");
     }
     free(buffer);
     return 1;
@@ -29,6 +31,7 @@ int ConnectionSetup(int socketFD, char* password)
 
 // Send a small spurt to the server, because it is small (< 500 chars), we don't need to iterate through
 // the string, breaking it into chunks
+// Input: char** buffer full of what we want to send, int socket ID
 int SendData(char** buffer, int socketFD)
 {
     int charsWritten = (int) send(socketFD, *buffer, strlen(*buffer), 0); // Write to the server
@@ -39,6 +42,7 @@ int SendData(char** buffer, int socketFD)
 
 // Receives the file from the server, because the max file size is small (< 500 chars), we do not
 // need to interate through the data, breaking it into smaller chunks
+// Input: char** null buffer where we will put response, int socket ID
 int ReceiveData(char** buffer, int establishedConnectionFD)
 {
     int arraySize = 1056;
@@ -50,6 +54,9 @@ int ReceiveData(char** buffer, int establishedConnectionFD)
     return 0;
 }
 
+// Basic function to get input from the command prompt and put
+// it into a buffer. Note, the buffer is limit to 1056 characters
+// Input: char** buffer full of what we want to send, char* User handle
 int GetUserData(char** buffer, char* handle)
 {
     // First, allocate the buffer

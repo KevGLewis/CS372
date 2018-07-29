@@ -1,4 +1,18 @@
+//---------------------------------------------------------------/
+// Author: Kevin Lewis
+// ONID: LewiKevi
+// Date: 07/29/2018
+// Description: Basic chat client. Takes the server host location
+// and portnumber from the command line:
+// USAGE: chatclient host port
+// Sends the first message to the client, then alternates receiving
+// and sending. Client can end the chat by typing \quit
+//---------------------------------------------------------------/
+
 #include "snd_recv_help.h"
+
+
+//Note: The boiler plate code was provided by the CS344 class
 
 int main(int argc, char *argv[])
 {
@@ -14,7 +28,7 @@ int main(int argc, char *argv[])
     
 	if (argc < 3) { fprintf(stderr,"USAGE: %s host port\n", argv[0]); exit(0); } // Check usage & args
 
-    
+    /*************************************** FROM CS 344 *********************************************/
 	// Set up the server address struct
 	memset((char*)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
 	portNumber = atoi(argv[2]); // Get the port number, convert to an integer from a string
@@ -31,6 +45,7 @@ int main(int argc, char *argv[])
         error("CLIENT: ERROR opening socket");
         exit(2);
     }
+     /*************************************** End FROM CS 344 *********************************************/
     
     // Get the handle from the user
     printf("Please provide your handle (up to 10 characters): ");
@@ -48,7 +63,6 @@ int main(int argc, char *argv[])
         close(socketFD);
         exit(2);
     }
-    
     
     // Loop the send/receive connection until the user types quit
     shouldContinue = 1;
