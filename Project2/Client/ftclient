@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+import socket
+import sys
+from socket import *
+
+#---------------------------------------------------------------/
+ # Author: Kevin Lewis
+ # ONID: LewiKevi
+ # Date: 07/29/2018
+ # Description: Basic chat server. Receives an initial message
+ # from a client and alternates send/receiving text. The user may
+ # use the "\quit" text to quit a chat at any time, and CTRL-C to exit
+ # completely.
+#---------------------------------------------------------------/
+
+# The base for this server is from https://medium.com/swlh/lets-write-a-chat-app-in-python-f6783a9ac170
+
+PASSWORD = "&&&&&"
+BUFSIZ = 1026
+
+class ClientFTP(object):
+    def __init__(self, clientAddress, clientPort):
+        self.clientSocket = socket(AF_INET, SOCK_STREAM)
+        self.clientSocket.connect((clientAddress, clientPort))
+        if(self.connection_setup()):
+            self.get_command(clientSocket)
+
+    def request_list_from_server(self):
+        print("Request a list")
+
+    def request_file_from_server(self, fileName):
+        print("Request a file: " + fileName)
+
+    def close(self):
+        self.clientSocket.close()
+
+    def connection_setup(self):
+        self.send_Message(PASSWORD)
+        msg = self.receive_Message()
+        if msg == "OK":
+            print("Secure connection established")
+            return True
+        else:
+            print("Error in establishing secure connection")
+            return False
+
+    def send_Message(self, msg):
+        msg += "@@"
+        self.clientSocket.send(bytes(msg, "utf8"))
+
+    def receive_Message(self):
+        msg = ""
+        while not msg.endswith("@@"):
+            msgBuffer = (self.clientSocket.recv(BUFSIZ)).decode("utf8")
+            msg += msgBuffer
+
+        return msg
+
+    def get_command(self):
+            # get the user
+        print("Provide a command:\n" + 
+                "\t-l will get a list of available files\n" + 
+                "\t-g <FILENAME> will request a file")
+        userChat = input("> ")
+        splitInput = userChat.split()
+        if splitInput[0] == "-l":
+            self.request_list_from_server()
+
+        elif splitInput[0] == "-g":
+            self.request_file_from_server(splitInput[1])
+
+        else:
+            print("Invalid command")
+            self.get_command()
+
+# Main function, gets the arguments from the command line
+# and starts the server
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print ("USAGE: " + sys.argv[0] + " host port")
+        exit()
+
+    clientAddress = str(sys.argv[1])
+    clientPort = int(sys.argv[2])
+    cftp = ClientFTP(clientAddress, clientPort)
+    print("Finished")
+    cftp.close()
+            

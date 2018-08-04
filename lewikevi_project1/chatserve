@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+import socket
+import sys
+from socket import *
+
+#---------------------------------------------------------------/
+ # Author: Kevin Lewis
+ # ONID: LewiKevi
+ # Date: 07/29/2018
+ # Description: Basic chat server. Receives an initial message
+ # from a client and alternates send/receiving text. The user may
+ # use the "\quit" text to quit a chat at any time, and CTRL-C to exit
+ # completely.
+#---------------------------------------------------------------/
+
+# The base for this server is from https://medium.com/swlh/lets-write-a-chat-app-in-python-f6783a9ac170
+
+BUFSIZ = 1024
+HANDLE = "SammyServer"
+
+# Encapsulates accepting the connection from the client
+def accept_connections(serverSocket):
+    """ Runs the server and verifies that the client is known"""
+    while True:
+        print("Server is accepting connections - to quit press CTRL-C")
+        try:
+            connectionSocket, client_address = serverSocket.accept()
+            sentence = connectionSocket.recv(BUFSIZ)
+            if(sentence == bytes("PORTNUM", "utf8")):
+                connectionSocket.send(bytes("%s" % "PORTNUM", "utf8"))
+                print("Connected to Client -- Waiting for Message from Client -- To quit, type \\quit")
+                try:
+                    # Goes into an endless loop of sending / receiving
+                    handle_client(connectionSocket)
+                    print("Connection Closed")
+                # Catches if the user want to exit completely (CTRL-C)
+                except KeyboardInterrupt:
+                    connectionSocket.send(bytes("close", "utf8"))
+                    connectionSocket.close()
+                    break
+                connectionSocket.close()
+            else:
+                print("Bad Conection")
+                connectionSocket.close()
+        # Catches if the user want to exit completely (CTRL-C)
+        except KeyboardInterrupt:
+            if 'connectionSocket' in locals():
+                connectionSocket.close()
+            break
+
+# Once a connection has been created, alternates sending and receiving
+# the chat in a loop. Exits the loop when the client type \quit
+def handle_client(connectionSocket):  # Takes client socket as argument.
+    """Handles a single client connection."""
+    shouldWeContinue = True
+    while shouldWeContinue:
+        msg = connectionSocket.recv(BUFSIZ)
+        #We need to quit the program
+        if not msg:
+            shouldWeContinue = False
+        
+        else:
+            # Print what the other host wrote
+            print(msg.decode("utf8"))
+            shouldWeContinue = send_message(connectionSocket)
+
+# Sends the message to the client, returns whether or not the client
+# wants to quit
+def send_message(connectionSocket): # Take client socket as argument
+    # get the user input from the server
+    userChat = input(HANDLE + "> ")
+    if(userChat == "\quit"):
+        connectionSocket.send(bytes("close", "utf8"))
+        return False;
+    else:
+        msg = HANDLE + "> " + userChat
+        connectionSocket.send(bytes(msg, "utf8"))
+        return True;
+
+# Setups the server socket API
+# Note: This was derived from the CS372 Notes
+def setup_socket(serverPort):
+    serverSocket = socket(AF_INET, SOCK_STREAM)
+    serverSocket.bind(('', serverPort))
+    serverSocket.listen(1)
+    accept_connections(serverSocket)
+    print("\nClosing Server Socket")
+    serverSocket.close()
+
+# Main function, gets the arguments from the command line
+# and starts the server
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print ("USAGE: " + sys.argv[0] + " port")
+        exit()
+
+    serverPort = int(sys.argv[1])
+    setup_socket(serverPort)
+            

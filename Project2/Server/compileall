@@ -1,0 +1,4 @@
+#!/bin/bash
+gcc -g -Wall -std=gnu99 ftserver.c snd_recv_help.c -o ftserver
+rm -rf *.dSYM
+
