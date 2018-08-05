@@ -16,14 +16,14 @@ from socket import *
 # The base for this server is from https://medium.com/swlh/lets-write-a-chat-app-in-python-f6783a9ac170
 
 PASSWORD = "&&&&&"
-BUFSIZ = 1026
+BUFSIZ = 1056
 
 class ClientFTP(object):
     def __init__(self, clientAddress, clientPort):
         self.clientSocket = socket(AF_INET, SOCK_STREAM)
         self.clientSocket.connect((clientAddress, clientPort))
         if(self.connection_setup()):
-            self.get_command(clientSocket)
+            self.get_command()
 
     def request_list_from_server(self):
         print("Request a list")
@@ -41,6 +41,7 @@ class ClientFTP(object):
             print("Secure connection established")
             return True
         else:
+            print("We Received " + msg)
             print("Error in establishing secure connection")
             return False
 
@@ -53,6 +54,8 @@ class ClientFTP(object):
         while not msg.endswith("@@"):
             msgBuffer = (self.clientSocket.recv(BUFSIZ)).decode("utf8")
             msg += msgBuffer
+        
+        msg = msg[:-2]
 
         return msg
 
@@ -82,7 +85,10 @@ if __name__ == "__main__":
 
     clientAddress = str(sys.argv[1])
     clientPort = int(sys.argv[2])
-    cftp = ClientFTP(clientAddress, clientPort)
-    print("Finished")
-    cftp.close()
+    try:
+        cftp = ClientFTP(clientAddress, clientPort)
+        print("Finished")
+        cftp.close()
+    except ConnectionRefusedError:
+        print("Server unavailable")
             

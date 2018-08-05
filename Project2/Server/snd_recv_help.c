@@ -15,7 +15,7 @@ void LoadFile(char** buffer, char* fileName)
 {
     char* terminalLocation;
     int totalSize = 0;
-    int arraySize = 1056;
+    int arraySize = BUFFSIZE;
     *buffer = calloc(arraySize, sizeof(char));
     FILE *fp = fopen(fileName, "r");
     if(fp == NULL)
@@ -84,6 +84,7 @@ int PasswordReceive(int socketFD, char* password)
     buffer = calloc(50, sizeof(char));
     sprintf(buffer, "%s", "OK"); // Load the buffer with our password
     SendData(&buffer, socketFD);
+    printf("Connection Successfully Established\n");
     
     return 1;
 }
@@ -116,9 +117,9 @@ int SendData(char** buffer, int socketFD)
 // When we receive the file, we want to ensure that all messages end with @@
 int ReceiveData(char** buffer, int establishedConnectionFD)
 {
-    char buffSpurt[1056];
+    char buffSpurt[BUFFSIZE];
     int totalSize = 0;
-    int arraySize = 1056;
+    int arraySize = BUFFSIZE;
     *buffer = calloc(arraySize, sizeof(char));
     
     int charsRead = 0;
@@ -127,7 +128,7 @@ int ReceiveData(char** buffer, int establishedConnectionFD)
     {
         // Get the message from the client / server
         memset(buffSpurt, '\0', sizeof(buffSpurt));
-        charsRead = (int) recv(establishedConnectionFD, buffSpurt, 1055, 0);
+        charsRead = (int) recv(establishedConnectionFD, buffSpurt, BUFFSIZE - 1, 0);
         if (charsRead < 0) error("ERROR reading from socket");
         totalSize += charsRead;
         // Expand the buffer as needed
@@ -141,6 +142,8 @@ int ReceiveData(char** buffer, int establishedConnectionFD)
     int terminalLocation = (int) (strstr(*buffer, "@@") - *buffer); // Where is the terminal
     (*buffer)[terminalLocation] = '\0'; // End the string early to wipe out the terminal
     
+    printf("We received %s\n", *buffer);
+    
     return 0;
 }
 
@@ -150,7 +153,7 @@ int ReceiveData(char** buffer, int establishedConnectionFD)
 int GetUserData(char** buffer, char* handle)
 {
     // First, allocate the buffer
-    *buffer = calloc(1056, sizeof(char));
+    *buffer = calloc(BUFFSIZE, sizeof(char));
     
     int isOK = 1;
     size_t tempBufferSize = 0;
@@ -173,3 +176,22 @@ int GetUserData(char** buffer, char* handle)
     return isOK;
 }
 
+// Takes the command and will respond with the correct information
+void HandleCommand(char** buffer, int socketFD)
+{
+    // first, separate out the words, we only want to check the first word
+    char *command = strtok(*buffer, " ");
+    
+    if(strcmp(command, "-l") == 0)
+    {
+        
+    }
+    else if(strcmp(command, "-g") == 0)
+    {
+        
+    }
+    else
+    {
+        
+    }
+}

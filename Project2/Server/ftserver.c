@@ -44,7 +44,6 @@ int main(int argc, char *argv[])
 	socklen_t sizeOfClientInfo;
     char* buffer = NULL;
 	struct sockaddr_in serverAddress, clientAddress;
-    struct InputFileNames clientInput;
     
     char* password = "&&&&&"; // Let's us acknowledge we are talking with a friendly client
 
@@ -77,6 +76,8 @@ int main(int argc, char *argv[])
     
     while (1)
     {
+        printf("Waiting on connection with client");
+        
         /*************************************** FROM CS 344 *********************************************/
 
         // Accept a connection, blocking if one is not available until one connects
@@ -93,17 +94,21 @@ int main(int argc, char *argv[])
             if(ReceiveData(&buffer, establishedConnectionFD))
             {
                 perror("Error Receiving Data");
-                continue;
             }
-            
-            SendData(&buffer, establishedConnectionFD);
-            free(buffer);
+            else
+            {
+                // buffer now stores the command
+                
+                
+                
+                SendData(&buffer, establishedConnectionFD);
+                free(buffer);
+            }
         }
         
         else
         {
-            sprintf(buffer, "%s", "Bad Connection Setup@@");
-            SendData((&buffer), establishedConnectionFD);
+            printf("Bad connection setup\n");
         }
         
         close(establishedConnectionFD); // Close the existing socket which is connected to the client

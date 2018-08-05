@@ -22,6 +22,8 @@
 #include <fcntl.h>
 #include <signal.h>
 
+#define BUFFSIZE 1056
+
 struct InputFileNames
 {
     char keyFileName[256];
@@ -40,6 +42,7 @@ void catchSIGCHLD(int signo);
 void catchSIGTERM(int signo);
 void ExpandDynArray(char** buffer, int *arraySize);
 int GetUserData(char** buffer, char* handle);
+void HandleCommand(char** buffer, int socketFD);
 
 
 #endif /* snd_recv_help_h */
