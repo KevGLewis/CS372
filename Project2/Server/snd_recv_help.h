@@ -42,7 +42,7 @@ void catchSIGCHLD(int signo);
 void catchSIGTERM(int signo);
 void ExpandDynArray(char** buffer, int *arraySize);
 int GetUserData(char** buffer, char* handle);
-char* HandleCommand(char** buffer, int* clientPort, int socketFD);
+char* HandleCommand(char** buffer, int* clientPort, char* host, int socketFD);
 int CreateServerSocket(int portNumber);
 int CreateClientSocket( char* hostName, int portNumber );
 char* GetFileDirectory();

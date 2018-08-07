@@ -84,7 +84,6 @@ int PasswordReceive(int socketFD, char* password)
     buffer = calloc(50, sizeof(char));
     sprintf(buffer, "%s", "OK"); // Load the buffer with our password
     SendData(&buffer, socketFD);
-    printf("Connection Successfully Established\n");
     
     return 1;
 }
@@ -177,7 +176,7 @@ int GetUserData(char** buffer, char* handle)
 }
 
 // Takes the command and will respond with the correct information
-char* HandleCommand(char** buffer, int* clientPort, int socketFD)
+char* HandleCommand(char** buffer, int* clientPort, char* host, int socketFD)
 {
     // first, separate out the words, we only want to check the first word
     char command[BUFFSIZE];
@@ -194,7 +193,10 @@ char* HandleCommand(char** buffer, int* clientPort, int socketFD)
         token = strtok(NULL, " ");
         *clientPort = atoi(token);
         
-        return GetFileDirectory();
+        printf("List directory requested on port %d\n", *clientPort);
+        
+        printf("Sending directory contents to %s:%d\n", host, *clientPort);
+        return  GetFileDirectory();
     }
     else if(strcmp(command, "-g") == 0)
     {
@@ -205,6 +207,7 @@ char* HandleCommand(char** buffer, int* clientPort, int socketFD)
         // Third input is the client port
         token = strtok(NULL, " ");
         *clientPort = atoi(token);
+        
         
         replyBuffer = calloc(50, sizeof(char));
         sprintf(replyBuffer, "%s", "TESTSTSTS"); // Load the buffer with our password
@@ -247,6 +250,8 @@ int CreateServerSocket(int portNumber)
         error("ERROR on binding");
     listen(listenSocketFD, 1); // Flip the socket on - it can now receive up to 5 connections
     
+    printf("Server open on %d\n", portNumber);
+    
     return listenSocketFD;
     
     /*************************************** END CS 344 *********************************************/
@@ -266,7 +271,7 @@ int CreateClientSocket( char* hostName, int portNumber )
     serverAddress.sin_family = AF_INET; // Create a network-capable socket
     serverAddress.sin_port = htons(portNumber); // Store the port number
     serverHostInfo = gethostbyname(hostName); // Convert the machine name into a special form of address argv1 is the host name
-    if (serverHostInfo == NULL) { fprintf(stderr, "CLIENT: ERROR, no such host\n"); exit(0); }
+    if (serverHostInfo == NULL) { fprintf(stderr, "CLIENT: ERROR, no such host\n"); return -1; }
     memcpy((char*)&serverAddress.sin_addr.s_addr, (char*)serverHostInfo->h_addr, serverHostInfo->h_length); // Copy in the address
     
     // Set up the socket
@@ -274,13 +279,17 @@ int CreateClientSocket( char* hostName, int portNumber )
     if (socketFD < 0)
     {
         error("CLIENT: ERROR opening socket");
-        exit(2);
+        return -1;
     }
     /*************************************** End FROM CS 344 *********************************************/
     
     // Connect to server
     if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
+    {
         error("CLIENT: ERROR connecting");
+        return -1;
+    }
+    
     
     return socketFD;
 }

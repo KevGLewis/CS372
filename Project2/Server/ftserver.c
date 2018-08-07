@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     int establishedConnectionFD;
     int clientServerSocket;
 	socklen_t sizeOfClientInfo;
-    int clientPort = 0;
+    int clientPort, serverPort = 0;
     char* buffer = NULL;
     char* bufferTwo = NULL;
     char host[BUFFSIZE];
@@ -54,7 +54,8 @@ int main(int argc, char *argv[])
 
 	if (argc < 2) { fprintf(stderr,"USAGE: %s port\n", argv[0]); exit(1); } // Check usage & args
 
-    listenSocketFD = CreateServerSocket(atoi(argv[1]));
+    serverPort = atoi(argv[1]);
+    listenSocketFD = CreateServerSocket(serverPort);
 
     // Handle the Signal Hanlders
     SetupSignalHandlers();
@@ -77,12 +78,12 @@ int main(int argc, char *argv[])
         // From https://beej.us/guide/bgnet/html/multi/getnameinfoman.html
         getnameinfo( (struct sockaddr *)&clientAddress, sizeof clientAddress, host, sizeof host, NULL, NULL, 0);
     
-        
-        printf("the client address is %s\n", host);
     
         // Handshake with the client
         if(PasswordReceive(establishedConnectionFD, password))
         {
+            printf("Connection from %s\n", host);
+            
             // Receive the data from the Client
             if(ReceiveData(&buffer, establishedConnectionFD))
             {
@@ -91,14 +92,26 @@ int main(int argc, char *argv[])
             else
             {
                 // buffer now stores the command
-                bufferTwo = HandleCommand(&buffer, &clientPort, establishedConnectionFD);
+                bufferTwo = HandleCommand(&buffer, &clientPort, host, establishedConnectionFD);
                 
                 clientServerSocket = CreateClientSocket(host, clientPort);
                 
-                SendData(&bufferTwo, clientServerSocket);
+                if(clientServerSocket == -1)
+                {
+                    printf("Error connecting to %s:%d, sending error message to %s:%d\n", host, clientPort, host, serverPort);
+                    free(bufferTwo);
+                    
+                    bufferTwo = calloc(50, sizeof(char));
+                    sprintf(bufferTwo, "%s", "Connection Error");
+                    SendData(&bufferTwo, establishedConnectionFD);
+                    
+                }
+                else
+                {
+                    SendData(&bufferTwo, clientServerSocket);
+                    free(bufferTwo);
+                }
             }
-            
-            
             free(buffer);
         }
         
