@@ -177,21 +177,112 @@ int GetUserData(char** buffer, char* handle)
 }
 
 // Takes the command and will respond with the correct information
-void HandleCommand(char** buffer, int socketFD)
+char* HandleCommand(char** buffer, int* clientPort, int socketFD)
 {
     // first, separate out the words, we only want to check the first word
-    char *command = strtok(*buffer, " ");
+    char command[BUFFSIZE];
+    char fileName[BUFFSIZE];
+    
+    char *token = strtok(*buffer, " ");
+    char *replyBuffer = NULL;
+    
+    strcpy(command, token);
     
     if(strcmp(command, "-l") == 0)
     {
+        // The second input is the text to encrpt file name
+        token = strtok(NULL, " ");
+        *clientPort = atoi(token);
         
+        return GetFileDirectory();
     }
     else if(strcmp(command, "-g") == 0)
     {
+        // second input is the filename
+        token = strtok(NULL, " ");
+        strcpy(fileName, token);
         
+        // Third input is the client port
+        token = strtok(NULL, " ");
+        *clientPort = atoi(token);
+        
+        replyBuffer = calloc(50, sizeof(char));
+        sprintf(replyBuffer, "%s", "TESTSTSTS"); // Load the buffer with our password
+        return replyBuffer;
     }
     else
     {
-        
+        replyBuffer = calloc(50, sizeof(char));
+        sprintf(replyBuffer, "%s", "INCORRECT COMMAND"); // Load the buffer with our password
+        return replyBuffer;
     }
 }
+
+char* GetFileDirectory()
+{
+    char* replyBuffer = NULL;
+    replyBuffer = calloc(BUFFSIZE, sizeof(char));
+    sprintf(replyBuffer, "%s", "TEST123"); // Load the buffer with our password
+    return replyBuffer;
+}
+
+int CreateServerSocket(int portNumber)
+{
+    struct sockaddr_in serverAddress;
+    int listenSocketFD;
+    /*************************************** FROM CS 344 *********************************************/
+    
+    // Set up the address struct for this process (the server)
+    memset((char *)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
+    serverAddress.sin_family = AF_INET; // Create a network-capable socket
+    serverAddress.sin_port = htons(portNumber); // Store the port number
+    serverAddress.sin_addr.s_addr = INADDR_ANY; // Any address is allowed for connection to this process
+    
+    // Set up the socket
+    listenSocketFD = socket(AF_INET, SOCK_STREAM, 0); // Create the socket
+    if (listenSocketFD < 0) error("ERROR opening socket");
+    
+    // Enable the socket to begin listening
+    if (bind(listenSocketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to port
+        error("ERROR on binding");
+    listen(listenSocketFD, 1); // Flip the socket on - it can now receive up to 5 connections
+    
+    return listenSocketFD;
+    
+    /*************************************** END CS 344 *********************************************/
+}
+
+int CreateClientSocket( char* hostName, int portNumber )
+{
+    printf("Creating Connection To Client %s %d \n", hostName, portNumber);
+    
+    struct sockaddr_in serverAddress;
+    struct hostent* serverHostInfo;
+    int socketFD;
+    
+    /*************************************** FROM CS 344 *********************************************/
+    // Set up the server address struct
+    memset((char*)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
+    serverAddress.sin_family = AF_INET; // Create a network-capable socket
+    serverAddress.sin_port = htons(portNumber); // Store the port number
+    serverHostInfo = gethostbyname(hostName); // Convert the machine name into a special form of address argv1 is the host name
+    if (serverHostInfo == NULL) { fprintf(stderr, "CLIENT: ERROR, no such host\n"); exit(0); }
+    memcpy((char*)&serverAddress.sin_addr.s_addr, (char*)serverHostInfo->h_addr, serverHostInfo->h_length); // Copy in the address
+    
+    // Set up the socket
+    socketFD = socket(AF_INET, SOCK_STREAM, 0); // Create the socket
+    if (socketFD < 0)
+    {
+        error("CLIENT: ERROR opening socket");
+        exit(2);
+    }
+    /*************************************** End FROM CS 344 *********************************************/
+    
+    // Connect to server
+    if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
+        error("CLIENT: ERROR connecting");
+    
+    return socketFD;
+}
+
+

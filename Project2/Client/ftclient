@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import socket
 import sys
+import argparse
 from socket import *
 
 #---------------------------------------------------------------/
@@ -18,12 +19,76 @@ from socket import *
 PASSWORD = "&&&&&"
 BUFSIZ = 1056
 
+class UserCommands(object):
+    clientAddress = ""
+    clientPort = 0
+    fileName = ""
+    serverPort = 0
+
+    def __init__(self, clientAddress, clientPort, fileName, serverPort):
+        self.clientAddress = clientAddress
+        self.clientPort = clientPort
+        self.fileName = fileName
+        self.serverPort = serverPort
+
+
+class FTPController(object):
+    def __init__(self, commands):
+        self.commands = commands
+
+    def ConnectToServer(self):
+        self.client = ClientFTP(self.commands.clientAddress, self.commands.clientPort)
+        return self.client.connection_setup()
+
+    def AcceptList(self):
+        self.server = ServerFTP(self.commands.serverPort)
+        msg = self.server.receive_Message()
+        print(msg)
+
+    def AcceptFile(self):
+        self.server = ServerFTP(self.commands.serverPort)
+        msg = self.server.receive_Message()
+        print(msg)
+
+    def SendCommandToServer(self):
+        if(self.commands.fileName is not None):
+            self.client.send_Message("-g " + self.commands.fileName + " " + str(self.commands.serverPort))
+            self.AcceptFile()
+        else:
+            self.client.send_Message("-l " + str(self.commands.serverPort))
+            self.AcceptList()
+
+
+class ServerFTP(object):
+    def __init__(self, serverPort):
+        self.serverSocket = socket(AF_INET, SOCK_STREAM)
+        self.serverSocket.bind(('', serverPort))
+        self.serverSocket.listen(1)
+        self.accept_connections()
+
+    def close(self):
+        self.serverSocket.close()
+
+    def accept_connections(self):
+        print("Waiting on Server")
+        self.connectionSocket, client_address = self.serverSocket.accept()
+        
+
+    def receive_Message(self):
+        msg = ""
+        while not msg.endswith("@@"):
+            msgBuffer = (self.connectionSocket.recv(BUFSIZ)).decode("utf8")
+            msg += msgBuffer
+        
+        msg = msg[:-2]
+        print('Received ' + msg)
+        return msg
+
+
 class ClientFTP(object):
     def __init__(self, clientAddress, clientPort):
         self.clientSocket = socket(AF_INET, SOCK_STREAM)
         self.clientSocket.connect((clientAddress, clientPort))
-        if(self.connection_setup()):
-            self.get_command()
 
     def request_list_from_server(self):
         print("Request a list")
@@ -50,45 +115,56 @@ class ClientFTP(object):
         self.clientSocket.send(bytes(msg, "utf8"))
 
     def receive_Message(self):
+        print("Trying to receive message from server")
         msg = ""
         while not msg.endswith("@@"):
             msgBuffer = (self.clientSocket.recv(BUFSIZ)).decode("utf8")
             msg += msgBuffer
         
         msg = msg[:-2]
-
         return msg
 
-    def get_command(self):
-            # get the user
-        print("Provide a command:\n" + 
-                "\t-l will get a list of available files\n" + 
-                "\t-g <FILENAME> will request a file")
-        userChat = input("> ")
-        splitInput = userChat.split()
-        if splitInput[0] == "-l":
-            self.request_list_from_server()
+def parse_input():
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("serverAddress", action="store")
+    parser.add_argument("serverPort", action="store", type=int )
+    parser.add_argument("ftpServerPort", action="store", type=int)
+    parser.add_argument("-l", help="request file list from server", dest="list_request", action="store_true")
+    parser.add_argument("-g", help="request file from server USAGE: -g <FILENAME>", dest="fileName", type=str)
+    
+    args = parser.parse_args()
+    
+    fileName = ""
+    if not args.list_request and args.fileName != None:
+        fileName = args.fileName
+    
+    elif not args.list_request:
+        return None
 
-        elif splitInput[0] == "-g":
-            self.request_file_from_server(splitInput[1])
-
-        else:
-            print("Invalid command")
-            self.get_command()
+    return UserCommands(args.serverAddress, args.serverPort, args.fileName, args.ftpServerPort)
 
 # Main function, gets the arguments from the command line
 # and starts the server
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print ("USAGE: " + sys.argv[0] + " host port")
-        exit()
+    
+    parsed_commands = parse_input()
 
-    clientAddress = str(sys.argv[1])
-    clientPort = int(sys.argv[2])
-    try:
-        cftp = ClientFTP(clientAddress, clientPort)
-        print("Finished")
-        cftp.close()
-    except ConnectionRefusedError:
-        print("Server unavailable")
+    if parsed_commands != None:
+        print("Test Successful")
+        controller = FTPController(parsed_commands)
+        if(controller.ConnectToServer()):
+            controller.SendCommandToServer()
+
+    else:
+        print("-l or -g argument required")
+
+    #clientAddress = str(sys.argv[1])
+    #clientPort = int(sys.argv[2])
+    #try:
+     #   cftp = ClientFTP(clientAddress, clientPort)
+      #  print("Finished")
+       # cftp.close()
+    #except ConnectionRefusedError:
+     #   print("Server unavailable")
             
