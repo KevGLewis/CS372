@@ -41,11 +41,10 @@ void catchSIGTERM(int signo)
 int main(int argc, char *argv[])
 {
     int establishedConnectionFD;
-    int clientServerSocket;
 	socklen_t sizeOfClientInfo;
     int clientPort, serverPort = 0;
     char* buffer = NULL;
-    char* bufferTwo = NULL;
+    CommandParse* commandResult;
     char host[BUFFSIZE];
 	struct sockaddr_in clientAddress;
     
@@ -63,7 +62,7 @@ int main(int argc, char *argv[])
     
     while (1)
     {
-        printf("Waiting on connection with client");
+        printf("Waiting on connection with client\n");
         
         /*************************************** FROM CS 344 *********************************************/
 
@@ -76,7 +75,7 @@ int main(int argc, char *argv[])
         
         // Get the name of the client
         // From https://beej.us/guide/bgnet/html/multi/getnameinfoman.html
-        getnameinfo( (struct sockaddr *)&clientAddress, sizeof clientAddress, host, sizeof host, NULL, NULL, 0);
+        getnameinfo( (struct sockaddr *)&clientAddress, sizeof clientAddress, host, sizeof host, NULL, 0, 0);
     
     
         // Handshake with the client
@@ -87,32 +86,36 @@ int main(int argc, char *argv[])
             // Receive the data from the Client
             if(ReceiveData(&buffer, establishedConnectionFD))
             {
-                perror("Error Receiving Data");
+                perror("Error Receiving Data\n");
             }
             else
             {
                 // buffer now stores the command
-                bufferTwo = HandleCommand(&buffer, &clientPort, host, establishedConnectionFD);
+                commandResult = HandleCommand(&buffer, &clientPort, host, establishedConnectionFD);
+                free(buffer);
                 
-                clientServerSocket = CreateClientSocket(host, clientPort);
-                
-                if(clientServerSocket == -1)
+                // If we have an error, just send the error message back over the first connection
+                if(commandResult->error)
                 {
-                    printf("Error connecting to %s:%d, sending error message to %s:%d\n", host, clientPort, host, serverPort);
-                    free(bufferTwo);
-                    
-                    bufferTwo = calloc(50, sizeof(char));
-                    sprintf(bufferTwo, "%s", "Connection Error");
-                    SendData(&bufferTwo, establishedConnectionFD);
-                    
+                    SendData(&(commandResult->message), establishedConnectionFD);
                 }
                 else
                 {
-                    SendData(&bufferTwo, clientServerSocket);
-                    free(bufferTwo);
+                    // Tell the client the command got through and it was ok
+                    buffer = calloc(10, sizeof(char));
+                    sprintf(buffer, "%s", "OK");
+                    SendData(&buffer, establishedConnectionFD);
+                    free(buffer);
+                    
+                    // Receive message from client, informing us that the connection is ready
+                    ReceiveData(&buffer, establishedConnectionFD);
+                    free(buffer);
+                    
+                    // Send the data to the client
+                    SendRequestedDataToClient(host, clientPort, commandResult->message, serverPort, establishedConnectionFD);
                 }
+                
             }
-            free(buffer);
         }
         
         else
@@ -121,6 +124,7 @@ int main(int argc, char *argv[])
         }
         
         close(establishedConnectionFD); // Close the existing socket which is connected to the client
+        printf("\n");
     }
     
 	return 0;

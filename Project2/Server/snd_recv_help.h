@@ -11,6 +11,7 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -30,6 +31,12 @@ struct InputFileNames
     char textToEncryptFileName[256];
 };
 
+typedef struct
+{
+    char* message;
+    int error;
+} CommandParse;
+
 
 void error(const char *msg);
 void VerifyInput(char* plaintextFile, char* keyFile);
@@ -42,10 +49,12 @@ void catchSIGCHLD(int signo);
 void catchSIGTERM(int signo);
 void ExpandDynArray(char** buffer, int *arraySize);
 int GetUserData(char** buffer, char* handle);
-char* HandleCommand(char** buffer, int* clientPort, char* host, int socketFD);
+CommandParse* HandleCommand(char** buffer, int* clientPort, char* host, int socketFD);
 int CreateServerSocket(int portNumber);
 int CreateClientSocket( char* hostName, int portNumber );
-char* GetFileDirectory();
+char* GetFileDirectory(void);
+void SendRequestedDataToClient( char* host, int clientPort, char* msg, int serverPort, int establishedConnectionFD);
+int IsFileInDirectory( char* fileName);
 
 
 #endif /* snd_recv_help_h */

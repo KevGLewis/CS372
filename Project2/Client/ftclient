@@ -41,14 +41,21 @@ class FTPController(object):
         return self.client.connection_setup()
 
     def AcceptList(self):
-        self.server = ServerFTP(self.commands.serverPort)
-        msg = self.server.receive_Message()
-        print(msg)
+        if(self.client.verifyInput()):
+            self.client.send_Message("Client accepting connections on " + str(self.commands.serverPort))
+            self.server = ServerFTP(self.commands.serverPort)
+            print("Receiving list from " + self.commands.clientAddress + ":" + str(self.commands.clientPort))
+            msg = self.server.receive_Message()
+            print(msg)
 
     def AcceptFile(self):
-        self.server = ServerFTP(self.commands.serverPort)
-        msg = self.server.receive_Message()
-        print(msg)
+        if(self.client.verifyInput()):
+            self.client.send_Message("Client accepting connections on " + str(self.commands.serverPort))
+            self.server = ServerFTP(self.commands.serverPort)
+            print("Receiving file " + self.commands.fileName + " from " + self.commands.clientAddress + ":" + str(self.commands.clientPort))
+            msg = self.server.receive_Message()
+            with open(self.commands.fileName, "w") as text_file:
+                text_file.write(msg)
 
     def SendCommandToServer(self):
         if(self.commands.fileName is not None):
@@ -72,7 +79,6 @@ class ServerFTP(object):
     def accept_connections(self):
         print("Waiting on Server")
         self.connectionSocket, client_address = self.serverSocket.accept()
-        
 
     def receive_Message(self):
         msg = ""
@@ -80,21 +86,17 @@ class ServerFTP(object):
             msgBuffer = (self.connectionSocket.recv(BUFSIZ)).decode("utf8")
             msg += msgBuffer
         
+        ## Ends with @@ so we'll need to trim the message
         msg = msg[:-2]
-        print('Received ' + msg)
         return msg
 
 
 class ClientFTP(object):
     def __init__(self, clientAddress, clientPort):
+        self.clientAddress = clientAddress
+        self.clientPort = clientPort
         self.clientSocket = socket(AF_INET, SOCK_STREAM)
         self.clientSocket.connect((clientAddress, clientPort))
-
-    def request_list_from_server(self):
-        print("Request a list")
-
-    def request_file_from_server(self, fileName):
-        print("Request a file: " + fileName)
 
     def close(self):
         self.clientSocket.close()
@@ -115,7 +117,6 @@ class ClientFTP(object):
         self.clientSocket.send(bytes(msg, "utf8"))
 
     def receive_Message(self):
-        print("Trying to receive message from server")
         msg = ""
         while not msg.endswith("@@"):
             msgBuffer = (self.clientSocket.recv(BUFSIZ)).decode("utf8")
@@ -123,6 +124,14 @@ class ClientFTP(object):
         
         msg = msg[:-2]
         return msg
+
+    def verifyInput(self):
+        msg = self.receive_Message()
+        if msg == "OK":
+            return True
+        else:
+            print(self.clientAddress + ":" + str(self.clientPort) + " says " + msg)
+            return False
 
 def parse_input():
     
@@ -151,20 +160,10 @@ if __name__ == "__main__":
     parsed_commands = parse_input()
 
     if parsed_commands != None:
-        print("Test Successful")
         controller = FTPController(parsed_commands)
         if(controller.ConnectToServer()):
             controller.SendCommandToServer()
 
     else:
         print("-l or -g argument required")
-
-    #clientAddress = str(sys.argv[1])
-    #clientPort = int(sys.argv[2])
-    #try:
-     #   cftp = ClientFTP(clientAddress, clientPort)
-      #  print("Finished")
-       # cftp.close()
-    #except ConnectionRefusedError:
-     #   print("Server unavailable")
             

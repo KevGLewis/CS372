@@ -141,8 +141,6 @@ int ReceiveData(char** buffer, int establishedConnectionFD)
     int terminalLocation = (int) (strstr(*buffer, "@@") - *buffer); // Where is the terminal
     (*buffer)[terminalLocation] = '\0'; // End the string early to wipe out the terminal
     
-    printf("We received %s\n", *buffer);
-    
     return 0;
 }
 
@@ -176,14 +174,16 @@ int GetUserData(char** buffer, char* handle)
 }
 
 // Takes the command and will respond with the correct information
-char* HandleCommand(char** buffer, int* clientPort, char* host, int socketFD)
+CommandParse* HandleCommand(char** buffer, int* clientPort, char* host, int socketFD)
 {
     // first, separate out the words, we only want to check the first word
     char command[BUFFSIZE];
     char fileName[BUFFSIZE];
     
     char *token = strtok(*buffer, " ");
-    char *replyBuffer = NULL;
+    
+    CommandParse* commResult = malloc(sizeof(CommandParse));
+    commResult->message = NULL;
     
     strcpy(command, token);
     
@@ -196,8 +196,12 @@ char* HandleCommand(char** buffer, int* clientPort, char* host, int socketFD)
         printf("List directory requested on port %d\n", *clientPort);
         
         printf("Sending directory contents to %s:%d\n", host, *clientPort);
-        return  GetFileDirectory();
+        commResult->message = GetFileDirectory();
+        commResult->error = 0;
+        
+        return commResult;
     }
+    
     else if(strcmp(command, "-g") == 0)
     {
         // second input is the filename
@@ -208,24 +212,55 @@ char* HandleCommand(char** buffer, int* clientPort, char* host, int socketFD)
         token = strtok(NULL, " ");
         *clientPort = atoi(token);
         
+        printf("File \"%s\" requested on port %d\n", fileName, *clientPort);
         
-        replyBuffer = calloc(50, sizeof(char));
-        sprintf(replyBuffer, "%s", "TESTSTSTS"); // Load the buffer with our password
-        return replyBuffer;
+        if(IsFileInDirectory(fileName))
+        {
+            LoadFile(&(commResult->message), fileName);
+            commResult->error = 0;
+            printf("Sending file \"%s\" to %s:%d\n", fileName, host, *clientPort);
+        }
+        else
+        {
+            printf("File Not Found, sending error message to %s:%d\n", host, socketFD);
+            commResult->message = calloc(50, sizeof(char));
+            sprintf(commResult->message, "%s", "FILE NOT FOUND");
+            commResult->error = 1;
+        }
+        
+        return commResult;
     }
     else
     {
-        replyBuffer = calloc(50, sizeof(char));
-        sprintf(replyBuffer, "%s", "INCORRECT COMMAND"); // Load the buffer with our password
-        return replyBuffer;
+        commResult->message = calloc(50, sizeof(char));
+        sprintf(commResult->message, "%s", "INCORRECT COMMAND"); // Load the buffer with our password
+        commResult->error = 1;
+        
+        return commResult;
     }
 }
 
+// Will return the file directory
+// Referenced https://www.sanfoundry.com/c-program-list-files-directory/
 char* GetFileDirectory()
 {
     char* replyBuffer = NULL;
     replyBuffer = calloc(BUFFSIZE, sizeof(char));
-    sprintf(replyBuffer, "%s", "TEST123"); // Load the buffer with our password
+    
+    DIR *d;
+    struct dirent *dir;
+    d = opendir(".");
+    if (d)
+    {
+        while ((dir = readdir(d)) != NULL)
+        {
+            strcat(replyBuffer, dir->d_name);
+            strcat(replyBuffer, "\n");
+            //printf("%s\n", dir->d_name);
+        }
+        closedir(d);
+    }
+    
     return replyBuffer;
 }
 
@@ -257,10 +292,23 @@ int CreateServerSocket(int portNumber)
     /*************************************** END CS 344 *********************************************/
 }
 
+// Quickly checks if the file is in the directory
+int IsFileInDirectory( char* fileName)
+{
+    FILE *fp = fopen(fileName, "r");
+    if(fp == NULL)
+    {
+        return 0;
+    }
+    else
+    {
+        fclose(fp);
+        return 1;
+    }
+}
+
 int CreateClientSocket( char* hostName, int portNumber )
 {
-    printf("Creating Connection To Client %s %d \n", hostName, portNumber);
-    
     struct sockaddr_in serverAddress;
     struct hostent* serverHostInfo;
     int socketFD;
@@ -292,6 +340,36 @@ int CreateClientSocket( char* hostName, int portNumber )
     
     
     return socketFD;
+}
+
+// Sends the requested data to the client
+// Only the msg, host and client port are required to send the message over the secondary
+// connection. The other information is used to send any error messages to the other server
+void SendRequestedDataToClient( char* host, int clientPort, char* msg, int serverPort, int establishedConnectionFD)
+{
+    char* buffer = NULL;
+    
+    // Create a connection to the client
+    int clientServerSocket = CreateClientSocket(host, clientPort);
+    
+    // If there was an error with the connection
+    if(clientServerSocket == -1)
+    {
+        printf("Error connecting to %s:%d, sending error message to %s:%d\n", host, clientPort, host, serverPort);
+        
+        buffer = calloc(50, sizeof(char));
+        sprintf(buffer, "%s", "Connection Error");
+        SendData(&buffer, establishedConnectionFD);
+        free(buffer);
+        
+    }
+    
+    // If not, let's send the message
+    else
+    {
+        SendData( &msg, clientServerSocket);
+        close(clientServerSocket);
+    }
 }
 
 
